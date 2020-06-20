@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.geometry.Insets?>
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ControllerServer">
+   <center>
+      <TextArea fx:id="textArea" editable="false" focusTraversable="false" BorderPane.alignment="CENTER">
+         <padding>
+            <Insets bottom="2.0" left="1.0" right="1.0" top="1.0" />
+         </padding>
+      </TextArea>
+   </center>
+</BorderPane>
