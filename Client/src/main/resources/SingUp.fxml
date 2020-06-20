@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.Button?>
+<AnchorPane prefHeight="155.0" prefWidth="310.0" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ControllerSingUp">
+   <children>
+      <Label fx:id="lblNick" layoutX="5.0" layoutY="5.0" prefHeight="25.0" prefWidth="150.0" text="Имя (ник)" />
+      <Label fx:id="lblLogin" layoutX="5.0" layoutY="35.0" prefHeight="25.0" prefWidth="150.0" text="Логин" />
+      <Label fx:id="lblPassword1" layoutX="5.0" layoutY="65.0" prefHeight="25.0" prefWidth="150.0" text="Пароль" />
+      <Label fx:id="lblPassword2" layoutX="5.0" layoutY="95.0" prefHeight="25.0" prefWidth="150.0" text="Пароль (для проверки)" />
+      <TextField fx:id="txtNick" layoutX="155.0" layoutY="5.0" prefWidth="150.0" />
+      <TextField fx:id="txtLogin" layoutX="155.0" layoutY="35.0" prefWidth="150.0" />
+      <PasswordField fx:id="txtPassword1" layoutX="155.0" layoutY="65.0" prefWidth="150.0" />
+      <PasswordField fx:id="txtPassword2" layoutX="155.0" layoutY="95.0" prefWidth="150.0" />
+      <Button defaultButton="true" layoutX="5.0" layoutY="125.0" mnemonicParsing="false" onAction="#doSingUp" prefHeight="25.0" prefWidth="150.0" text="Регистрация в чате" />
+      <Button cancelButton="true" layoutX="155.0" layoutY="125.0" mnemonicParsing="false" onAction="#doCancel" prefHeight="25.0" prefWidth="150.0" text="Отмена" />
+   </children>
+</AnchorPane>
