@@ -1,6 +1,4 @@
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 
 public class DBAuthService implements AuthService {
 
@@ -20,7 +18,7 @@ public class DBAuthService implements AuthService {
     private final int AUTH_LIST_SIZE = 5;
     private Connection connection;
     private Statement statement;
-    private PreparedStatement preparedStatement;
+    private PreparedStatement ps;
 
     public DBAuthService() {
         try {
@@ -46,17 +44,22 @@ public class DBAuthService implements AuthService {
                 "nick text" +
                 ");");
 
-        statement.executeUpdate("DELETE FROM clients");
+        ResultSet rs = statement.executeQuery("SELECT COUNT(*) AS rowcount FROM clients");
+        int count = rs.getInt("rowcount");
+        rs.close();
 
-        preparedStatement = connection.prepareStatement("INSERT INTO clients (log, pass, nick) VALUES (?, ?, ?)");
-        for (int i = 1; i <= AUTH_LIST_SIZE; i++) {
-            preparedStatement.setString(1, "log" + i);
-            preparedStatement.setString(2, "pass" + i);
-            preparedStatement.setString(3, "nick" + i);
-            preparedStatement.addBatch();
+        if (count == 0) {
+            // начальное заполнение таблицы клиентов для отладки
+            ps = connection.prepareStatement("INSERT INTO clients (log, pass, nick) VALUES (?, ?, ?)");
+            for (int i = 1; i <= AUTH_LIST_SIZE; i++) {
+                ps.setString(1, "log" + i);
+                ps.setString(2, "pass" + i);
+                ps.setString(3, "nick" + i);
+                ps.addBatch();
+            }
+            ps.executeBatch();
+            ps.close();
         }
-        preparedStatement.executeBatch();
-        preparedStatement.close();
     }
 
     @Override
@@ -91,11 +94,26 @@ public class DBAuthService implements AuthService {
                     String.format("SELECT nick, pass FROM clients WHERE log = \"%s\"",
                             log, pass));
             if (rs.next()) {
+                // такой логин уже имеется в БД
                 String nickInDB = rs.getString("nick");
                 String passInDB = rs.getString("pass");
-                if (nickInDB.equalsIgnoreCase(nick) && passInDB.equals(pass)) {
+                if (passInDB.equals(pass)) {
+                    // пароль совпал. если изменён ник -> перезапишем новый ник в БД
+                     if (!nickInDB.equalsIgnoreCase(nick)) {
+                         statement.executeUpdate(
+                                 String.format("UPDATE clients SET nick = \"%s\" WHERE log = \"%s\"",
+                                         nick, log));
+                     }
                     return nick;
+                } else {
+                    return null; // пароль не совпал (возможна попытка подбора пароля) -> отказ в авторизации
                 }
+            } else {
+                // такого логина нет в БД -> регистрируем нового пользователя
+                statement.executeUpdate(
+                        String.format("INSERT INTO clients (log, pass, nick) VALUES (\"%s\", \"%s\", \"%s\")",
+                                log, pass, nick));
+                return nick;
             }
         } catch (SQLException throwables) {
             throwables.printStackTrace();
