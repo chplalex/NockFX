@@ -147,6 +147,9 @@ public class ClientEntry {
                 }
                 if (nick == null && socket != null && !socket.isClosed()) {
                     sendMsg(Const.CMD_STOP_CLIENT);
+                    closeConnection();
+                    controller.putText("Неавторизованный клиент отключен по тайм-ауту неактивности");
+
                 }
             }).start();
         }
@@ -161,7 +164,7 @@ public class ClientEntry {
     }
 
     public void closeConnection() {
-        controller.putText("Удаляю клиента " + socket.toString());
+        controller.putText("Отключаю клиента " + socket.toString());
         try {
             if (in != null) {
                 in.close();
