@@ -6,10 +6,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.ListView;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
@@ -29,12 +26,15 @@ public class ControllerClient implements Initializable {
 
     private Stage stageClient;
     private Stage stageSigUp;
+    private Stage stageSettings;
     private ControllerSingUp controllerSingUp;
+    private ControllerSettings controllerSettings;
     private Socket socket;
     private DataInputStream in;
     private DataOutputStream out;
     private boolean clientConnected;
     private String clientNick;
+    private String clientLog;
 
     @FXML
     private HBox boxLogAndPass;
@@ -49,12 +49,17 @@ public class ControllerClient implements Initializable {
     @FXML
     private ListView<String> listView;
     @FXML
+    private HBox boxTextAndSettings;
+    @FXML
     private TextField textField;
+    @FXML
+    private Button btnSettings;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
         stageSigUp = createSigUpWindow();
+        stageSettings = createSettigsWindow();
         clientConnected = false;
         setControlsVisibility(false);
         connect();
@@ -79,26 +84,38 @@ public class ControllerClient implements Initializable {
                 while (true) {
                     String msg = in.readUTF().trim();
 
-                    // Сервер отклоняет аутентификацию
+                    // Сервер отклоняет авторизацию
                     if (msg.startsWith(Const.CMD_AUTH_NO)) {
-                        putText("Вы не авторизованы в чате");
-                        clientNick = null;
-                        setControlsVisibility(false);
+                        putText("Запрос на авторизацию отклонён сервером");
+//                        clientNick = null;
+//                        clientLog = null;
+//                        setControlsVisibility(false);
                         continue;
                     }
 
-                    // Сервер подтверждает аутентификацию
+                    // Сервер подтверждает авторизацию
                     if (msg.startsWith(Const.CMD_AUTH_OK)) {
-                        String[] msgArr = msg.split(Const.CMD_REGEX, 2);
-                        if (msgArr.length != 2) {
+                        String[] msgArr = msg.split(Const.CMD_REGEX, 3);
+                        if (msgArr.length != 3) {
                             putText("Некорректная команда от сервера :: " + msg);
-                            clientNick = null;
-                            setControlsVisibility(false);
+//                            clientNick = null;
+//                            clientLog = null;
+//                            setControlsVisibility(false);
                             continue;
                         }
                         clientNick = msgArr[1];
+                        clientLog = msgArr[2];
                         setControlsVisibility(true);
-                        putText("Вы вошли в чат под ником " + clientNick);
+                        putText("Вы авторизованы. (логин = " + clientLog + ", ник = " + clientNick + ")");
+                    }
+
+                    // Сервер даёт команду на деавторизацию
+                    if (msg.startsWith(Const.CMD_DE_AUTH)) {
+                        putText("Вы вышли из чата");
+                        clientNick = null;
+                        clientLog = null;
+                        setControlsVisibility(false);
+                        continue;
                     }
 
                     // Сервер прислал широковещательное сообщение
@@ -160,6 +177,7 @@ public class ControllerClient implements Initializable {
         try {
             if (clientNick != null) {
                 clientNick = null;
+                clientLog = null;
                 setControlsVisibility(false);
             }
             if (clientConnected) {
@@ -266,8 +284,8 @@ public class ControllerClient implements Initializable {
         listView.setVisible(clientAuthenticated);
         listView.setManaged(clientAuthenticated);
 
-        textField.setVisible(clientAuthenticated);
-        textField.setManaged(clientAuthenticated);
+        boxTextAndSettings.setVisible(clientAuthenticated);
+        boxTextAndSettings.setManaged(clientAuthenticated);
 
         if (stageClient == null) {
             return;
@@ -285,6 +303,31 @@ public class ControllerClient implements Initializable {
         Platform.runLater(() -> {
             stageClient.setTitle(title);
         });
+    }
+
+    private Stage createSettigsWindow() {
+
+        Stage stage = null;
+
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("Settings.fxml"));
+            Parent root = fxmlLoader.load();
+
+            stage = new Stage();
+            stage.setTitle("NockFX :: Settings");
+            stage.setResizable(false);
+            stage.setScene(new Scene(root));
+            stage.initStyle(StageStyle.UTILITY);
+            stage.initModality(Modality.APPLICATION_MODAL);
+
+            controllerSettings = fxmlLoader.getController();
+            controllerSettings.setControllerClient(this);
+
+        } catch (IOException e) {
+            putText("Ошибка загрузки окна настроек " + e.toString());
+        }
+
+        return stage;
     }
 
     private Stage createSigUpWindow() {
@@ -312,8 +355,20 @@ public class ControllerClient implements Initializable {
         return stage;
     }
 
+    public void showSettingsWindow(ActionEvent actionEvent) {
+        controllerSettings.txtNick.setText(clientNick);
+        controllerSettings.txtLogin.setText(clientLog);
+        stageSettings.show();
+    }
+
     public void showSingUpWindow(ActionEvent actionEvent) {
         stageSigUp.show();
+    }
+
+    public void hideSettingsWindow() {
+        Platform.runLater(() -> {
+            stageSettings.hide();
+        });
     }
 
     public void hideSingUpWindow() {
@@ -357,5 +412,9 @@ public class ControllerClient implements Initializable {
         }
 
         textField.setText(Const.USER_PRIVATE_MSG + " " + receiver + " " + msg);
+    }
+
+    public void tryChangeSettings(String nick, String passOld, String passNew1, String passNew2) {
+        putText("Временная заглушка. Здесь будет реализован метод изменения учётных данных пользователя");
     }
 }

@@ -2,19 +2,6 @@ import java.sql.*;
 
 public class DBAuthService implements AuthService {
 
-    private class AuthEntry {
-        String nick;
-        String log;
-        String pass;
-
-        public AuthEntry(String nick, String log, String pass) {
-            this.nick = nick;
-            this.log = log;
-            this.pass = pass;
-        }
-
-    }
-
     private final int AUTH_LIST_SIZE = 5;
     private Connection connection;
     private Statement statement;
@@ -73,13 +60,13 @@ public class DBAuthService implements AuthService {
     }
 
     @Override
-    public String getNickByLogAndPass(String log, String pass) {
+    public AuthData getDataByLogAndPass(String log, String pass) {
         try {
             ResultSet rs = statement.executeQuery(
                     String.format("SELECT nick FROM clients WHERE log = \"%s\" AND pass = \"%s\"",
                             log, pass));
             if (rs.next()) {
-                return rs.getString("nick");
+                return new AuthData(rs.getString("nick"), log, pass);
             }
         } catch (SQLException throwables) {
             throwables.printStackTrace();
@@ -88,7 +75,7 @@ public class DBAuthService implements AuthService {
     }
 
     @Override
-    public String getNickBySingUp(String nick, String log, String pass) {
+    public AuthData getDataBySingUp(String nick, String log, String pass) {
         try {
             ResultSet rs = statement.executeQuery(
                     String.format("SELECT nick, pass FROM clients WHERE log = \"%s\"",
@@ -104,7 +91,7 @@ public class DBAuthService implements AuthService {
                                  String.format("UPDATE clients SET nick = \"%s\" WHERE log = \"%s\"",
                                          nick, log));
                      }
-                    return nick;
+                    return new AuthData(nick, log, pass);
                 } else {
                     return null; // пароль не совпал (возможна попытка подбора пароля) -> отказ в авторизации
                 }
@@ -113,10 +100,47 @@ public class DBAuthService implements AuthService {
                 statement.executeUpdate(
                         String.format("INSERT INTO clients (log, pass, nick) VALUES (\"%s\", \"%s\", \"%s\")",
                                 log, pass, nick));
-                return nick;
+                return new AuthData(nick, log, pass);
             }
         } catch (SQLException throwables) {
             throwables.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public AuthData changeNick(String newNick, String log, String pass) {
+        try {
+            int count = statement.executeUpdate(String.format(
+                    "UPDATE clients SET nick = \"%s\" WHERE log = \"%s\" AND pass = \"%s\"",
+                    newNick, log, pass));
+            if (count == 1) {
+              return new AuthData(newNick, log, pass);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public AuthData changePass(String newPass, String log, String pass) {
+        try {
+            ResultSet rs = statement.executeQuery(String.format(
+                    "SELECT nick FROM clients WHERE log = \"%s\" AND pass = \"%s\"",
+                    log, pass));
+            String nick = rs.getString("nick");
+            if (nick == null) {
+                return null;
+            }
+            int count = statement.executeUpdate(String.format(
+                    "UPDATE clients SET pass = \"%s\" WHERE log = \"%s\"",
+                    newPass, log));
+            if (count == 1) {
+                return new AuthData(nick, log, newPass);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return null;
     }

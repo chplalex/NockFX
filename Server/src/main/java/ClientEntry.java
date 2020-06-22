@@ -9,6 +9,7 @@ public class ClientEntry {
     private DataInputStream in;
     private DataOutputStream out;
     private String nick;
+    private String log;
 
     public ClientEntry(ControllerServer controller, Socket socket) {
 
@@ -20,7 +21,7 @@ public class ClientEntry {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
 
-            setNick(null);
+            setLogAndNick(null);
 
             new Thread(() -> {
                 try {
@@ -38,15 +39,15 @@ public class ClientEntry {
                                 continue;
                             }
 
-                            setNick(controller.authService.getNickBySingUp(msgArr[1], msgArr[2], msgArr[3]));
+                            setLogAndNick(controller.authService.getDataBySingUp(msgArr[1], msgArr[2], msgArr[3]));
 
                             if (nick == null) {
                                 out.writeUTF(Const.CMD_AUTH_NO);
                                 continue;
                             }
 
-                            out.writeUTF(Const.CMD_AUTH_OK + " " + nick);
-                            controller.putText(nick + " :: авторизован");
+                            out.writeUTF(Const.CMD_AUTH_OK + " " + nick + " " + log);
+                            controller.putText(log + " :: " + nick + " :: авторизован");
                             controller.clientsListMsg();
                             continue;
                         }
@@ -61,24 +62,24 @@ public class ClientEntry {
                                 continue;
                             }
 
-                            setNick(controller.authService.getNickByLogAndPass(msgArr[1], msgArr[2]));
+                            setLogAndNick(controller.authService.getDataByLogAndPass(msgArr[1], msgArr[2]));
 
-                            if (nick == null) {
+                            if (log == null) {
                                 out.writeUTF(Const.CMD_AUTH_NO);
                                 continue;
                             }
 
-                            out.writeUTF(Const.CMD_AUTH_OK + " " + nick);
-                            controller.putText(nick + " :: авторизован");
+                            out.writeUTF(Const.CMD_AUTH_OK + " " + nick + " " + log);
+                            controller.putText(log + " :: " + nick + " авторизован");
                             controller.clientsListMsg();
                             continue;
                         }
 
                         // Клиент запрашивает деавторизацию
                         if (msg.startsWith(Const.CMD_DE_AUTH)) {
-                            controller.putText(nick + " деавторизован");
-                            setNick(null);
-                            out.writeUTF(Const.CMD_AUTH_NO);
+                            controller.putText(log + "::" + nick + " деавторизован");
+                            setLogAndNick(null);
+                            out.writeUTF(Const.CMD_DE_AUTH);
                             controller.clientsListMsg();
                             continue;
                         }
@@ -94,11 +95,11 @@ public class ClientEntry {
                             continue;
                         }
 
-                        // Клиент просит разослать приватное сообщение
+                        // Клиент просит отправить приватное сообщение
                         if (msg.startsWith(Const.CMD_PRIVATE_MSG)) {
                             String[] msgArr = msg.split(Const.CMD_REGEX, 3);
                             if (msgArr.length != 3) {
-                                controller.putText("Некорректный запрос от клиента :: " + msg);
+                                controller.putText(log + " :: " + nick + " :: " + "Некорректный запрос от клиента :: " + msg);
                                 continue;
                             }
                             controller.privateMsg(nick, msgArr[1], msgArr[2]);
@@ -108,8 +109,8 @@ public class ClientEntry {
                         // Клиент запрашивает разрешение на отключение
                         if (msg.startsWith(Const.CMD_STOP_CLIENT)) {
                             out.writeUTF(Const.CMD_STOP_CLIENT);
-                            controller.putText(nick + " :: получен запрос на отключение. Клиент отключен");
-                            setNick(null);
+                            controller.putText(log + " :: " + nick + " :: получен запрос на отключение. Клиент отключен");
+                            setLogAndNick(null);
                             controller.clientsListMsg();
                             break;
                         }
@@ -135,9 +136,10 @@ public class ClientEntry {
         return nick;
     }
 
-    public void setNick(String newNick) {
-        nick = newNick;
-        if (nick == null) {
+    public void setLogAndNick(AuthData newData) {
+        if (newData == null) {
+            log = null;
+            nick = null;
             new Thread(()-> {
                 Thread currentThread = Thread.currentThread();
                 try {
@@ -145,13 +147,15 @@ public class ClientEntry {
                 } catch (InterruptedException e) {
                     controller.putText("Ошибка прерывания таймаута ожидания авторизации клиента " + e.toString());
                 }
-                if (nick == null && socket != null && !socket.isClosed()) {
+                if (log == null && socket != null && !socket.isClosed()) {
                     sendMsg(Const.CMD_STOP_CLIENT);
                     closeConnection();
                     controller.putText("Неавторизованный клиент отключен по тайм-ауту неактивности");
-
                 }
             }).start();
+        } else {
+            log = newData.log;
+            nick = newData.nick;
         }
     }
 

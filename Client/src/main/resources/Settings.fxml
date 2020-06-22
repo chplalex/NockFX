@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="175.0" prefWidth="311.0" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ControllerSettings">
+   <children>
+      <Label fx:id="lblLogin" layoutX="5.0" layoutY="2.0" prefHeight="25.0" prefWidth="150.0" text="Логин (изменить нельзя)" />
+      <TextField fx:id="txtLogin" editable="false" focusTraversable="false" layoutX="155.0" layoutY="2.0" prefWidth="150.0" />
+
+      <Label fx:id="lblPasswordOld" layoutX="5.0" layoutY="29.0" prefHeight="25.0" prefWidth="150.0" text="Текущий пароль" />
+      <PasswordField fx:id="txtPasswordOld" layoutX="155.0" layoutY="29.0" prefWidth="150.0" />
+
+      <Separator layoutY="56.0" prefHeight="2.0" prefWidth="310.0" />
+
+      <Label fx:id="lblNick" layoutX="5.0" layoutY="60.0" prefHeight="25.0" prefWidth="150.0" text="Ник (можно изменить)" />
+      <TextField fx:id="txtNick" layoutX="155.0" layoutY="60.0" prefWidth="150.0" />
+
+      <Separator layoutX="1.0" layoutY="88.0" prefHeight="2.0" prefWidth="310.0" />
+
+      <Label fx:id="lblPasswordNew1" layoutX="5.0" layoutY="91.0" prefHeight="25.0" prefWidth="150.0" text="Новый пароль" />
+      <PasswordField fx:id="txtPasswordNew1" layoutX="155.0" layoutY="91.0" prefWidth="150.0" />
+
+      <Label fx:id="lblPasswordNew2" layoutX="5.0" layoutY="118.0" prefHeight="25.0" prefWidth="150.0" text="Новый пароль (проверка)" />
+      <PasswordField fx:id="txtPasswordNew2" layoutX="155.0" layoutY="118.0" prefHeight="25.0" prefWidth="150.0" />
+
+      <Button defaultButton="true" layoutX="5.0" layoutY="145.0" mnemonicParsing="false" onAction="#onChangeSettings" prefHeight="25.0" prefWidth="150.0" text="Изменить настройки" />
+      <Button cancelButton="true" layoutX="155.0" layoutY="145.0" mnemonicParsing="false" onAction="#onCancel" prefHeight="25.0" prefWidth="150.0" text="Отмена" />
+   </children>
+</AnchorPane>
