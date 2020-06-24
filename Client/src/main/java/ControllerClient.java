@@ -13,13 +13,13 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.ResourceBundle;
 
 public class ControllerClient implements Initializable {
@@ -35,6 +35,8 @@ public class ControllerClient implements Initializable {
     private boolean clientConnected;
     private String clientNick;
     private String clientLog;
+    private BufferedReader inHistory;
+    private BufferedWriter outHistory;
 
     @FXML
     private HBox boxLogAndPass;
@@ -105,15 +107,21 @@ public class ControllerClient implements Initializable {
                         }
                         clientNick = msgArr[1];
                         clientLog = msgArr[2];
+                        closeHistory();
+                        if (openHistory()) {
+                            readHistory();
+                        }
                         setControlsVisibility(true);
                         putText("Вы авторизованы. (логин = " + clientLog + ", ник = " + clientNick + ")");
                     }
 
                     // Сервер даёт команду на деавторизацию
                     if (msg.startsWith(Const.CMD_DE_AUTH)) {
+                        textArea.clear();
                         putText("Вы вышли из чата");
                         clientNick = null;
                         clientLog = null;
+                        closeHistory();
                         setControlsVisibility(false);
                         continue;
                     }
@@ -125,7 +133,9 @@ public class ControllerClient implements Initializable {
                             putText("Некорректная команда от сервера :: " + msg);
                             continue;
                         }
-                        putText(msgArr[1] + " -> (всем) :: " + msgArr[2]);
+                        String txt = msgArr[1] + " -> (всем) :: " + msgArr[2];
+                        putText(txt);
+                        writeHistory(txt);
                         continue;
                     }
 
@@ -136,13 +146,17 @@ public class ControllerClient implements Initializable {
                             putText("Некорректная команда от сервера :: " + msg);
                             continue;
                         }
-                        putText(msgArr[1] + " -> (только мне) :: " + msgArr[2]);
+                        String txt = msgArr[1] + " -> (только мне) :: " + msgArr[2];
+                        putText(txt);
+                        writeHistory(txt);
                         continue;
                     }
 
                     // Сервер даёт команду на закрытие клиента
                     if (msg.startsWith(Const.CMD_STOP_CLIENT)) {
                         clientConnected = false;
+                        textArea.clear();
+                        closeHistory();
                         putText("Соединение с сервером остановлено");
                         break;
                     }
@@ -150,7 +164,7 @@ public class ControllerClient implements Initializable {
                     // Сервер передает список клиентов
                     if (msg.startsWith(Const.CMD_CLIENTS_LIST)) {
                         String[] msgArr = msg.split(Const.CMD_REGEX);
-                        Platform.runLater(()-> {
+                        Platform.runLater(() -> {
                             ObservableList<String> list = listView.getItems();
                             list.clear();
                             for (int i = 1; i < msgArr.length; i++) {
@@ -167,6 +181,87 @@ public class ControllerClient implements Initializable {
                 close();
             }
         }).start();
+    }
+
+    private boolean openHistory() {
+        if (clientLog == null) {
+            return false;
+        }
+
+        if (inHistory != null || outHistory != null) {
+            closeHistory();
+        }
+
+        File fileHistory = new File("history_" + clientLog + ".txt");
+
+        if (!fileHistory.exists()) {
+            try {
+                fileHistory.createNewFile();
+            } catch (IOException e) {
+                putText("Ошибка создания файла истории :: " + fileHistory.toString());
+                return false;
+            }
+        }
+
+        try {
+            inHistory = new BufferedReader(new FileReader(fileHistory));
+            outHistory = new BufferedWriter(new FileWriter(fileHistory, true));
+            return true;
+        } catch (FileNotFoundException e) {
+            putText("Файл истории не найден :: " + fileHistory.toString());
+            return false;
+        } catch (IOException e) {
+            putText("Ошибка открытия файла истории :: " + fileHistory.toString());
+            return false;
+        }
+    }
+
+    private void closeHistory() {
+        if (inHistory != null) {
+            try {
+                inHistory.close();
+            } catch (IOException e) {
+                putText("Ошибка закрытия файла истории (входящий поток)");
+            }
+            inHistory = null;
+        }
+        if (outHistory != null) {
+            try {
+                outHistory.close();
+            } catch (IOException e) {
+                putText("Ошибка закрытия файла истории (исходящий поток)");
+            }
+            outHistory = null;
+        }
+    }
+
+    private void readHistory() {
+        String str;
+        List<String> list = new ArrayList<>();
+        try {
+            while ((str = inHistory.readLine()) != null) {
+                list.add(str);
+            }
+        } catch (IOException e) {
+            putText("Ошибка чтения файла истории");
+        }
+        int startIndex = 0;
+        if (list.size() > 100) {
+            startIndex = list.size() - 100;
+        }
+        for (int i = startIndex; i < list.size(); i++) {
+            putText(list.get(i));
+        }
+    }
+
+    private void writeHistory(String str) {
+        try {
+            outHistory.write(str);
+            outHistory.newLine();
+            outHistory.flush();
+        } catch (IOException e) {
+            putText("Ошибка записи в файл истории");
+        }
     }
 
     public void setStageClient(Stage stageClient) {
@@ -196,6 +291,7 @@ public class ControllerClient implements Initializable {
         } catch (IOException e) {
             putText("Ошибка закрытия клиента. " + e.toString());
         }
+        closeHistory();
     }
 
     public void putText(String text) {
