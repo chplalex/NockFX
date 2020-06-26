@@ -23,7 +23,7 @@ public class ClientEntry {
 
             setLogAndNick(null);
 
-            new Thread(() -> {
+            controller.execute(() -> {
                 try {
                     while (true) {
 
@@ -125,7 +125,7 @@ public class ClientEntry {
                     controller.removeClient(this);
                     closeConnection();
                 }
-            }).start();
+            });
 
         } catch (IOException e) {
             controller.putText("Ошибка подключения клиента " + e.toString());

@@ -11,6 +11,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Vector;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ControllerServer implements Initializable {
 
@@ -18,6 +20,7 @@ public class ControllerServer implements Initializable {
     AuthService authService;
     private ServerSocket serverSocket;
     private boolean serverRunning;
+    private ExecutorService executorService;
 
     @FXML
     private TextArea textArea;
@@ -27,6 +30,7 @@ public class ControllerServer implements Initializable {
         clients = new Vector<>();
         authService = new DBAuthService();
         serverRunning = false;
+        executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 4);
 
         try {
 
@@ -34,7 +38,7 @@ public class ControllerServer implements Initializable {
             serverRunning = true;
             putText("Сервер запущен. " + serverSocket.toString());
 
-            new Thread(() -> {
+            execute(() -> {
                 while (serverRunning) {
                     Socket socket = null;
                     try {
@@ -43,14 +47,14 @@ public class ControllerServer implements Initializable {
                         clients.add(new ClientEntry(this, socket));
                     } catch (IOException e) {
                         if (serverRunning) {
+                            serverRunning = false;
                             putText("Ошибка сервера. " + e.toString());
                         } else {
                             putText("Сервер закрыт. " + e.toString());
                         }
-                        break;
                     }
                 }
-            }).start();
+            });
 
         } catch (IOException e) {
             putText("Ошибка запуска сервера. " + e.toString());
@@ -70,6 +74,7 @@ public class ControllerServer implements Initializable {
             putText("Ошибка закрытия сервера. " + e.toString());
         }
         authService.close();
+        executorService.shutdown();
     }
 
     public void putText(String text) {
@@ -112,6 +117,10 @@ public class ControllerServer implements Initializable {
 
     public void removeClient(ClientEntry clientEntry) {
         clients.remove(clientEntry);
+    }
+
+    public void execute(Runnable task) {
+        executorService.execute(task);
     }
 
 }
