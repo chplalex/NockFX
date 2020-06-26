@@ -12,7 +12,7 @@
     <modules>
         <module>Client</module>
         <module>Server</module>
-        <module>Util</module>
+        <module>Common</module>
     </modules>
 
     <properties>
