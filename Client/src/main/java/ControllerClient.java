@@ -16,6 +16,7 @@ import javafx.stage.StageStyle;
 import java.io.*;
 import java.net.Socket;
 import java.net.URL;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -106,11 +107,11 @@ public class ControllerClient implements Initializable {
                             clientNick = msgArr[1];
                             clientLog = msgArr[2];
                             closeHistory();
+                            textArea.clear();
                             if (openHistory()) {
                                 readHistory();
                             }
                             setControlsVisibility(true);
-                            putText("Вы авторизованы. (логин = " + clientLog + ", ник = " + clientNick + ")", true);
                         }
                     }
 
@@ -121,6 +122,7 @@ public class ControllerClient implements Initializable {
                         clientNick = null;
                         clientLog = null;
                         closeHistory();
+                        textArea.clear();
                         setControlsVisibility(false);
                     }
 
@@ -228,6 +230,7 @@ public class ControllerClient implements Initializable {
     private void readHistory() {
         String str;
         List<String> list = new ArrayList<>();
+
         try {
             while ((str = inHistory.readLine()) != null) {
                 list.add(str);
@@ -235,10 +238,19 @@ public class ControllerClient implements Initializable {
         } catch (IOException e) {
             putText("Ошибка чтения файла истории", true);
         }
+
+        if (list.size() == 0) {
+            return;
+        }
+
+        putText("", false);
+
         int startIndex = 0;
+
         if (list.size() > 100) {
             startIndex = list.size() - 100;
         }
+
         for (int i = startIndex; i < list.size(); i++) {
             putText(list.get(i), false);
         }
@@ -287,11 +299,11 @@ public class ControllerClient implements Initializable {
         String str;
         if (insertDateTime) {
             SimpleDateFormat dateFormat = new SimpleDateFormat();
-            str = dateFormat.format(new Date()) + "\n" + text + "\n\n";
+            str = dateFormat.format(new Date()) + System.lineSeparator() + text;
         } else {
             str = text;
         }
-        textArea.appendText(str);
+        textArea.appendText(str + System.lineSeparator());
         return str;
     }
 
