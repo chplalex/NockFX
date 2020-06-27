@@ -13,10 +13,14 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import org.apache.commons.io.input.ReversedLinesFileReader;
+
 import java.io.*;
 import java.net.Socket;
 import java.net.URL;
-import java.nio.file.Files;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -38,7 +42,7 @@ public class ControllerClient implements Initializable {
     private boolean clientConnected;
     private String clientNick;
     private String clientLog;
-    private BufferedReader inHistory;
+    private ReversedLinesFileReader inHistory;
     private BufferedWriter outHistory;
 
     @FXML
@@ -196,7 +200,7 @@ public class ControllerClient implements Initializable {
         }
 
         try {
-            inHistory = new BufferedReader(new FileReader(fileHistory));
+            inHistory = new ReversedLinesFileReader(fileHistory, Charset.defaultCharset());
             outHistory = new BufferedWriter(new FileWriter(fileHistory, true));
             return true;
         } catch (FileNotFoundException e) {
@@ -229,31 +233,22 @@ public class ControllerClient implements Initializable {
 
     private void readHistory() {
         String str;
-        List<String> list = new ArrayList<>();
+        int count = 100;
+        List<String> list = new ArrayList<>(count);
 
         try {
-            while ((str = inHistory.readLine()) != null) {
+            while ((str = inHistory.readLine()) != null || --count > 0) {
                 list.add(str);
             }
         } catch (IOException e) {
             putText("Ошибка чтения файла истории", true);
         }
 
-        if (list.size() == 0) {
-            return;
+        for (int i = list.size() - 1; i >= 0; i--) {
+            putText(list.get(i), false);
         }
 
         putText("", false);
-
-        int startIndex = 0;
-
-        if (list.size() > 100) {
-            startIndex = list.size() - 100;
-        }
-
-        for (int i = startIndex; i < list.size(); i++) {
-            putText(list.get(i), false);
-        }
     }
 
     private void writeHistory(String str) {
@@ -359,8 +354,8 @@ public class ControllerClient implements Initializable {
 
         // временно для отладки
         int clientCount = (int) (Math.random() * 5) + 1;
-        logField.setText("log" + clientCount);
-        passField.setText("pass" + clientCount);
+        logField.setText("log5"); // + clientCount);
+        passField.setText("pass5"); // + clientCount);
 
         String log = logField.getText().trim();
         String pass = passField.getText().trim();
