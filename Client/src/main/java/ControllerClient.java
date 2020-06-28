@@ -232,12 +232,12 @@ public class ControllerClient implements Initializable {
     }
 
     private void readHistory() {
-        String str;
         int count = 100;
         List<String> list = new ArrayList<>(count);
 
         try {
-            while ((str = inHistory.readLine()) != null || --count > 0) {
+            String str;
+            while (count-- > 0 && (str = inHistory.readLine()) != null) {
                 list.add(str);
             }
         } catch (IOException e) {
@@ -294,11 +294,11 @@ public class ControllerClient implements Initializable {
         String str;
         if (insertDateTime) {
             SimpleDateFormat dateFormat = new SimpleDateFormat();
-            str = dateFormat.format(new Date()) + System.lineSeparator() + text;
+            str = dateFormat.format(new Date()) + System.lineSeparator() + text + System.lineSeparator() + System.lineSeparator();
         } else {
-            str = text;
+            str = text + System.lineSeparator();
         }
-        textArea.appendText(str + System.lineSeparator());
+        textArea.appendText(str);
         return str;
     }
 
@@ -354,8 +354,8 @@ public class ControllerClient implements Initializable {
 
         // временно для отладки
         int clientCount = (int) (Math.random() * 5) + 1;
-        logField.setText("log5"); // + clientCount);
-        passField.setText("pass5"); // + clientCount);
+        logField.setText("log" + clientCount);
+        passField.setText("pass" + clientCount);
 
         String log = logField.getText().trim();
         String pass = passField.getText().trim();

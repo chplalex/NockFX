@@ -1,10 +1,10 @@
 # Project exclude paths
-.idea/
+/.idea/
+/Client/src/test/
+/Client/target/
+/Common/src/test/
+/Common/target/
+/Server/src/test/
+/Server/target/
 *.iml
 *.iws
-Client/src/test/
-Client/target/
-Server/src/test/
-Server/target/
-Const/src/test/
-Const/target/
