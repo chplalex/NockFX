@@ -7,15 +7,6 @@ import javafx.scene.control.TextField;
 public class ControllerSingUp {
 
     @FXML
-    private Label lblNick;
-    @FXML
-    private Label lblLogin;
-    @FXML
-    private Label lblPassword1;
-    @FXML
-    private Label lblPassword2;
-
-    @FXML
     private TextField txtNick;
     @FXML
     private TextField txtLogin;

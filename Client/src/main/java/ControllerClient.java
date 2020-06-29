@@ -67,11 +67,8 @@ public class ControllerClient implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
-        currentThread().setName("Для отладки. Основной поток клиента");
-
         stageSigUp = createSigUpWindow();
         stageSettings = createSettigsWindow();
-        clientConnected = false;
         setControlsVisibility(false);
         connect();
 
@@ -80,6 +77,7 @@ public class ControllerClient implements Initializable {
     private void connect() {
 
         try {
+            clientConnected = false;
             socket = new Socket(Const.SERVER_ADDR, Const.SERVER_PORT);
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
@@ -409,7 +407,7 @@ public class ControllerClient implements Initializable {
         Stage stage = null;
 
         try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("Settings.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/Settings.fxml"));
             Parent root = fxmlLoader.load();
 
             stage = new Stage();
@@ -424,6 +422,7 @@ public class ControllerClient implements Initializable {
 
         } catch (IOException e) {
             putText("Ошибка загрузки окна настроек " + e.toString(), true);
+            return null;
         }
 
         return stage;
@@ -434,7 +433,7 @@ public class ControllerClient implements Initializable {
         Stage stage = null;
 
         try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("SingUp.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/SingUp.fxml"));
             Parent root = fxmlLoader.load();
 
             stage = new Stage();
@@ -449,6 +448,7 @@ public class ControllerClient implements Initializable {
 
         } catch (IOException e) {
             putText("Ошибка загрузки окна регистрации " + e.toString(), true);
+            return null;
         }
 
         return stage;
