@@ -13,6 +13,7 @@ import java.util.ResourceBundle;
 import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.*;
 
 public class ControllerServer implements Initializable {
 
@@ -21,12 +22,14 @@ public class ControllerServer implements Initializable {
     private ServerSocket serverSocket;
     private boolean serverRunning;
     private ExecutorService executorService;
+    private static final Logger logger = Logger.getLogger(Const.SERVER_NAME);
 
     @FXML
     private TextArea textArea;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
+
         clients = new Vector<>();
         authService = new DBAuthService();
         serverRunning = false;
@@ -80,6 +83,7 @@ public class ControllerServer implements Initializable {
     public void putText(String text) {
         SimpleDateFormat dateFormat = new SimpleDateFormat();
         textArea.appendText(dateFormat.format(new Date()) + "\n" + text + "\n\n");
+        logger.info(text);
     }
 
     public void broadcastMsg(String sender, String msg) {

@@ -1,10 +1,8 @@
 # Project exclude paths
 /.idea
-/Client/src/test
 /Client/target
-/Common/src/test
 /Common/target
-/Server/src/test
 /Server/target
 *.iml
 *.iws
+*.class

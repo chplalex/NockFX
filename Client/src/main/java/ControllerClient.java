@@ -19,18 +19,19 @@ import java.io.*;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharsetEncoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static java.lang.Thread.currentThread;
 
 public class ControllerClient implements Initializable {
 
+    private static Logger logger = Logger.getLogger(Const.CLIENT_NAME);
     private Stage stageClient;
     private Stage stageSigUp;
     private Stage stageSettings;
@@ -342,32 +343,46 @@ public class ControllerClient implements Initializable {
     }
 
     public void makeAuth(ActionEvent actionEvent) {
+        logger.info("trace 1");
+
         if (!clientConnected) {
             connect();
         }
 
+        logger.info("trace 2");
+
         if (!clientConnected) {
             return;
         }
+
+        logger.info("trace 3");
 
         // временно для отладки
         int clientCount = (int) (Math.random() * 5) + 1;
         logField.setText("log" + clientCount);
         passField.setText("pass" + clientCount);
 
+        logger.info("trace 4");
+
         String log = logField.getText().trim();
         String pass = passField.getText().trim();
+
+        logger.info("trace 5");
 
         if (log.equals("") || pass.equals("")) {
             putText("Введите ваши логин и пароль", true);
             return;
         }
 
+        logger.info("trace 6");
+
         try {
             out.writeUTF(Const.CMD_AUTH + " " + log + " " + pass);
         } catch (IOException e) {
             putText("Ошибка отправки сообщения " + e.toString(), true);
         }
+
+        logger.info("trace 7");
     }
 
     private void setControlsVisibility(boolean clientAuthenticated) {

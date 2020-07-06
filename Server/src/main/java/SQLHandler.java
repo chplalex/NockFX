@@ -105,7 +105,6 @@ public class SQLHandler {
         return null;
     }
 
-    @Override
     public AuthData changeNick(String newNick, String log, String pass) {
         try {
             int count = statement.executeUpdate(String.format(
@@ -120,7 +119,6 @@ public class SQLHandler {
         return null;
     }
 
-    @Override
     public AuthData changePass(String newPass, String log, String pass) {
         try {
             ResultSet rs = statement.executeQuery(String.format(
