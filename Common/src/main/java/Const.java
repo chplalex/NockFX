@@ -1,5 +1,8 @@
 public class Const {
 
+    public final static String SERVER_NAME = "Nock.Server";
+    public final static String CLIENT_NAME = "Nock.Client";
+
     public final static int SERVER_PORT = 8189;
     public final static String SERVER_ADDR = "localhost";
     // внутрение команды программы
