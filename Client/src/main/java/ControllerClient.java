@@ -13,17 +13,25 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import org.apache.commons.io.input.ReversedLinesFileReader;
+
 import java.io.*;
 import java.net.Socket;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static java.lang.Thread.currentThread;
 
 public class ControllerClient implements Initializable {
 
+    private static Logger logger = Logger.getLogger(Const.CLIENT_NAME);
     private Stage stageClient;
     private Stage stageSigUp;
     private Stage stageSettings;
@@ -35,7 +43,7 @@ public class ControllerClient implements Initializable {
     private boolean clientConnected;
     private String clientNick;
     private String clientLog;
-    private BufferedReader inHistory;
+    private ReversedLinesFileReader inHistory;
     private BufferedWriter outHistory;
 
     @FXML
@@ -62,7 +70,6 @@ public class ControllerClient implements Initializable {
 
         stageSigUp = createSigUpWindow();
         stageSettings = createSettigsWindow();
-        clientConnected = false;
         setControlsVisibility(false);
         connect();
 
@@ -71,97 +78,83 @@ public class ControllerClient implements Initializable {
     private void connect() {
 
         try {
+            clientConnected = false;
             socket = new Socket(Const.SERVER_ADDR, Const.SERVER_PORT);
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
             clientConnected = true;
-            putText("Подключение к серверу установлено");
+            putText("Подключение к серверу установлено", true);
         } catch (IOException e) {
-            putText("Отсутствует подключение к серверу");
+            putText("Отсутствует подключение к серверу", true);
             return;
         }
 
         new Thread(() -> {
+            currentThread().setName("Для отладки. Поток прослушивания сообщений от сервера");
             try {
-                while (true) {
+                do {
+
                     String msg = in.readUTF().trim();
 
                     // Сервер отклоняет авторизацию
                     if (msg.startsWith(Const.CMD_AUTH_NO)) {
-                        putText("Запрос на авторизацию отклонён сервером");
-//                        clientNick = null;
-//                        clientLog = null;
-//                        setControlsVisibility(false);
-                        continue;
+                        putText("Запрос на авторизацию отклонён сервером", true);
                     }
 
                     // Сервер подтверждает авторизацию
                     if (msg.startsWith(Const.CMD_AUTH_OK)) {
                         String[] msgArr = msg.split(Const.CMD_REGEX, 3);
                         if (msgArr.length != 3) {
-                            putText("Некорректная команда от сервера :: " + msg);
-//                            clientNick = null;
-//                            clientLog = null;
-//                            setControlsVisibility(false);
-                            continue;
+                            putText("Некорректная команда от сервера :: " + msg, true);
+                        } else {
+                            clientNick = msgArr[1];
+                            clientLog = msgArr[2];
+                            closeHistory();
+                            textArea.clear();
+                            if (openHistory()) {
+                                readHistory();
+                            }
+                            setControlsVisibility(true);
                         }
-                        clientNick = msgArr[1];
-                        clientLog = msgArr[2];
-                        closeHistory();
-                        if (openHistory()) {
-                            readHistory();
-                        }
-                        setControlsVisibility(true);
-                        putText("Вы авторизованы. (логин = " + clientLog + ", ник = " + clientNick + ")");
                     }
 
                     // Сервер даёт команду на деавторизацию
                     if (msg.startsWith(Const.CMD_DE_AUTH)) {
                         textArea.clear();
-                        putText("Вы вышли из чата");
+                        putText("Вы вышли из чата", true);
                         clientNick = null;
                         clientLog = null;
                         closeHistory();
+                        textArea.clear();
                         setControlsVisibility(false);
-                        continue;
                     }
 
-                    // Сервер прислал широковещательное сообщение
+                    // Получено широковещательное сообщение
                     if (msg.startsWith(Const.CMD_BROADCAST_MSG)) {
                         String[] msgArr = msg.split(Const.CMD_REGEX, 3);
                         if (msgArr.length != 3) {
-                            putText("Некорректная команда от сервера :: " + msg);
-                            continue;
+                            putText("Некорректная команда от сервера :: " + msg, true);
+                        } else {
+                            writeHistory(putText(msgArr[1] + " -> (всем) :: " + msgArr[2], true));
                         }
-                        String txt = msgArr[1] + " -> (всем) :: " + msgArr[2];
-                        putText(txt);
-                        writeHistory(txt);
-                        continue;
                     }
 
-                    // Сервер прислал приватное сообщение
+                    // Получено приватное сообщение
                     if (msg.startsWith(Const.CMD_PRIVATE_MSG)) {
                         String[] msgArr = msg.split(Const.CMD_REGEX, 3);
                         if (msgArr.length != 3) {
-                            putText("Некорректная команда от сервера :: " + msg);
-                            continue;
+                            putText("Некорректная команда от сервера :: " + msg, true);
+                        } else {
+                            writeHistory(putText(msgArr[1] + " -> (только мне) :: " + msgArr[2], true));
                         }
-                        String txt = msgArr[1] + " -> (только мне) :: " + msgArr[2];
-                        putText(txt);
-                        writeHistory(txt);
-                        continue;
                     }
 
-                    // Сервер даёт команду на закрытие клиента
+                    // Получена команда на закрытие клиента
                     if (msg.startsWith(Const.CMD_STOP_CLIENT)) {
                         clientConnected = false;
-                        textArea.clear();
-                        closeHistory();
-                        putText("Соединение с сервером остановлено");
-                        break;
                     }
 
-                    // Сервер передает список клиентов
+                    // Получен список клиентов
                     if (msg.startsWith(Const.CMD_CLIENTS_LIST)) {
                         String[] msgArr = msg.split(Const.CMD_REGEX);
                         Platform.runLater(() -> {
@@ -171,12 +164,11 @@ public class ControllerClient implements Initializable {
                                 list.add(String.format("%d. %s", i, msgArr[i]));
                             }
                         });
-                        continue;
                     }
 
-                }
+                } while (clientConnected);
             } catch (IOException e) {
-                putText("Ошибка чтения сообщения " + e.toString());
+                putText("Ошибка чтения сообщения сервера " + e.toString(), true);
             } finally {
                 close();
             }
@@ -196,22 +188,25 @@ public class ControllerClient implements Initializable {
 
         if (!fileHistory.exists()) {
             try {
-                fileHistory.createNewFile();
+                if (!fileHistory.createNewFile()) {
+                    putText("Ошибка создания файла истории :: " + fileHistory.toString(), true);
+                    return false;
+                };
             } catch (IOException e) {
-                putText("Ошибка создания файла истории :: " + fileHistory.toString());
+                putText("Ошибка создания файла истории :: " + fileHistory.toString(), true);
                 return false;
             }
         }
 
         try {
-            inHistory = new BufferedReader(new FileReader(fileHistory));
+            inHistory = new ReversedLinesFileReader(fileHistory, Charset.defaultCharset());
             outHistory = new BufferedWriter(new FileWriter(fileHistory, true));
             return true;
         } catch (FileNotFoundException e) {
-            putText("Файл истории не найден :: " + fileHistory.toString());
+            putText("Файл истории не найден :: " + fileHistory.toString(), true);
             return false;
         } catch (IOException e) {
-            putText("Ошибка открытия файла истории :: " + fileHistory.toString());
+            putText("Ошибка открытия файла истории :: " + fileHistory.toString(), true);
             return false;
         }
     }
@@ -221,7 +216,7 @@ public class ControllerClient implements Initializable {
             try {
                 inHistory.close();
             } catch (IOException e) {
-                putText("Ошибка закрытия файла истории (входящий поток)");
+                putText("Ошибка закрытия файла истории (входящий поток)", true);
             }
             inHistory = null;
         }
@@ -229,38 +224,38 @@ public class ControllerClient implements Initializable {
             try {
                 outHistory.close();
             } catch (IOException e) {
-                putText("Ошибка закрытия файла истории (исходящий поток)");
+                putText("Ошибка закрытия файла истории (исходящий поток)", true);
             }
             outHistory = null;
         }
     }
 
     private void readHistory() {
-        String str;
-        List<String> list = new ArrayList<>();
+        int count = 100;
+        List<String> list = new ArrayList<>(count);
+
         try {
-            while ((str = inHistory.readLine()) != null) {
+            String str;
+            while (count-- > 0 && (str = inHistory.readLine()) != null) {
                 list.add(str);
             }
         } catch (IOException e) {
-            putText("Ошибка чтения файла истории");
+            putText("Ошибка чтения файла истории", true);
         }
-        int startIndex = 0;
-        if (list.size() > 100) {
-            startIndex = list.size() - 100;
+
+        for (int i = list.size() - 1; i >= 0; i--) {
+            putText(list.get(i), false);
         }
-        for (int i = startIndex; i < list.size(); i++) {
-            putText(list.get(i));
-        }
+
+        putText("", false);
     }
 
     private void writeHistory(String str) {
         try {
             outHistory.write(str);
-            outHistory.newLine();
             outHistory.flush();
         } catch (IOException e) {
-            putText("Ошибка записи в файл истории");
+            putText("Ошибка записи в файл истории", true);
         }
     }
 
@@ -289,19 +284,26 @@ public class ControllerClient implements Initializable {
                 socket.close();
             }
         } catch (IOException e) {
-            putText("Ошибка закрытия клиента. " + e.toString());
+            putText("Ошибка закрытия клиента. " + e.toString(), true);
         }
         closeHistory();
     }
 
-    public void putText(String text) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat();
-        textArea.appendText(dateFormat.format(new Date()) + "\n" + text + "\n\n");
+    public String putText(String text, boolean insertDateTime) {
+        String str;
+        if (insertDateTime) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat();
+            str = dateFormat.format(new Date()) + System.lineSeparator() + text + System.lineSeparator() + System.lineSeparator();
+        } else {
+            str = text + System.lineSeparator();
+        }
+        textArea.appendText(str);
+        return str;
     }
 
     public void sendMsg(ActionEvent actionEvent) {
         if (!clientConnected) {
-            putText("Подключение к серверу не установлено");
+            putText("Подключение к серверу не установлено", true);
             return;
         }
 
@@ -311,7 +313,7 @@ public class ControllerClient implements Initializable {
                 msg.startsWith(Const.CMD_AUTH) ||
                 msg.startsWith(Const.CMD_BROADCAST_MSG) ||
                 msg.startsWith(Const.CMD_PRIVATE_MSG)) {
-            putText("Служебные символы в начале сообщения недопустимы");
+            putText("Служебные символы в начале сообщения недопустимы", true);
             return;
         }
 
@@ -319,7 +321,7 @@ public class ControllerClient implements Initializable {
             if (msg.startsWith(Const.USER_PRIVATE_MSG)) {
                 String[] msgArr = msg.split(Const.CMD_REGEX, 3);
                 if (msgArr.length != 3) {
-                    putText("Используйте корректный формат команды:\n/w <кому> <сообщение>");
+                    putText("Используйте корректный формат команды:\n/w <кому> <сообщение>", true);
                 } else {
                     out.writeUTF(Const.CMD_PRIVATE_MSG + " " + msgArr[1] + " " + msgArr[2]);
                     textField.clear();
@@ -336,37 +338,51 @@ public class ControllerClient implements Initializable {
             out.writeUTF(Const.CMD_BROADCAST_MSG + " " + msg);
             textField.clear();
         } catch (IOException e) {
-            putText("Ошибка отправки сообщения " + e.toString());
+            putText("Ошибка отправки сообщения " + e.toString(), true);
         }
     }
 
     public void makeAuth(ActionEvent actionEvent) {
+        logger.info("trace 1");
+
         if (!clientConnected) {
             connect();
         }
 
+        logger.info("trace 2");
+
         if (!clientConnected) {
             return;
         }
+
+        logger.info("trace 3");
 
         // временно для отладки
         int clientCount = (int) (Math.random() * 5) + 1;
         logField.setText("log" + clientCount);
         passField.setText("pass" + clientCount);
 
+        logger.info("trace 4");
+
         String log = logField.getText().trim();
         String pass = passField.getText().trim();
 
+        logger.info("trace 5");
+
         if (log.equals("") || pass.equals("")) {
-            putText("Введите ваши логин и пароль");
+            putText("Введите ваши логин и пароль", true);
             return;
         }
+
+        logger.info("trace 6");
 
         try {
             out.writeUTF(Const.CMD_AUTH + " " + log + " " + pass);
         } catch (IOException e) {
-            putText("Ошибка отправки сообщения " + e.toString());
+            putText("Ошибка отправки сообщения " + e.toString(), true);
         }
+
+        logger.info("trace 7");
     }
 
     private void setControlsVisibility(boolean clientAuthenticated) {
@@ -406,7 +422,7 @@ public class ControllerClient implements Initializable {
         Stage stage = null;
 
         try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("Settings.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/Settings.fxml"));
             Parent root = fxmlLoader.load();
 
             stage = new Stage();
@@ -420,7 +436,8 @@ public class ControllerClient implements Initializable {
             controllerSettings.setControllerClient(this);
 
         } catch (IOException e) {
-            putText("Ошибка загрузки окна настроек " + e.toString());
+            putText("Ошибка загрузки окна настроек " + e.toString(), true);
+            return null;
         }
 
         return stage;
@@ -431,7 +448,7 @@ public class ControllerClient implements Initializable {
         Stage stage = null;
 
         try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("SingUp.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/SingUp.fxml"));
             Parent root = fxmlLoader.load();
 
             stage = new Stage();
@@ -445,7 +462,8 @@ public class ControllerClient implements Initializable {
             controllerSingUp.setControllerClient(this);
 
         } catch (IOException e) {
-            putText("Ошибка загрузки окна регистрации " + e.toString());
+            putText("Ошибка загрузки окна регистрации " + e.toString(), true);
+            return null;
         }
 
         return stage;
@@ -486,7 +504,7 @@ public class ControllerClient implements Initializable {
         try {
             out.writeUTF(Const.CMD_SING_UP + " " + nick + "  " + login + " " + password);
         } catch (IOException e) {
-            putText("Ошибка отправки сообщения " + e.toString());
+            putText("Ошибка отправки сообщения " + e.toString(), true);
         }
     }
 
@@ -511,6 +529,6 @@ public class ControllerClient implements Initializable {
     }
 
     public void tryChangeSettings(String nick, String passOld, String passNew1, String passNew2) {
-        putText("Временная заглушка. Здесь будет реализован метод изменения учётных данных пользователя");
+        putText("Временная заглушка. Здесь будет реализован метод изменения учётных данных пользователя", true);
     }
 }

@@ -2,6 +2,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.logging.*;
 
 public class ClientEntry {
     private ControllerServer controller;
@@ -10,6 +11,7 @@ public class ClientEntry {
     private DataOutputStream out;
     private String nick;
     private String log;
+    private static final Logger logger = Logger.getLogger(Const.SERVER_NAME);
 
     public ClientEntry(ControllerServer controller, Socket socket) {
 
@@ -23,7 +25,7 @@ public class ClientEntry {
 
             setLogAndNick(null);
 
-            new Thread(() -> {
+            controller.execute(() -> {
                 try {
                     while (true) {
 
@@ -31,6 +33,7 @@ public class ClientEntry {
 
                         // Клиент запрашивает регистрацию
                         if (msg.startsWith(Const.CMD_SING_UP)) {
+                            logger.info("Клиент запросил регистрацию");
 
                             String[] msgArr = msg.split(Const.CMD_REGEX, 4);
 
@@ -54,6 +57,7 @@ public class ClientEntry {
 
                         // Клиент запрашивает авторизацию
                         if (msg.startsWith(Const.CMD_AUTH)) {
+                            logger.info("Клиент запросил авторизацию");
 
                             String[] msgArr = msg.split(Const.CMD_REGEX, 3);
 
@@ -77,6 +81,8 @@ public class ClientEntry {
 
                         // Клиент запрашивает деавторизацию
                         if (msg.startsWith(Const.CMD_DE_AUTH)) {
+                            logger.info("Клиент запросил деавторизацию");
+
                             controller.putText(log + "::" + nick + " деавторизован");
                             setLogAndNick(null);
                             out.writeUTF(Const.CMD_DE_AUTH);
@@ -86,6 +92,8 @@ public class ClientEntry {
 
                         // Клиент просит разослать широковещательное сообщение
                         if (msg.startsWith(Const.CMD_BROADCAST_MSG)) {
+                            logger.info("Клиент просит разослать широковещательное сообщение");
+
                             String[] msgArr = msg.split(Const.CMD_REGEX, 2);
                             if (msgArr.length != 2) {
                                 controller.putText("Некорректный запрос от клиента :: " + msg);
@@ -97,6 +105,8 @@ public class ClientEntry {
 
                         // Клиент просит отправить приватное сообщение
                         if (msg.startsWith(Const.CMD_PRIVATE_MSG)) {
+                            logger.info("Клиент просит отправить приватное сообщение");
+
                             String[] msgArr = msg.split(Const.CMD_REGEX, 3);
                             if (msgArr.length != 3) {
                                 controller.putText(log + " :: " + nick + " :: " + "Некорректный запрос от клиента :: " + msg);
@@ -108,6 +118,8 @@ public class ClientEntry {
 
                         // Клиент запрашивает разрешение на отключение
                         if (msg.startsWith(Const.CMD_STOP_CLIENT)) {
+                            logger.info("Клиент запросил разрешение на отключение");
+
                             out.writeUTF(Const.CMD_STOP_CLIENT);
                             controller.putText(log + " :: " + nick + " :: получен запрос на отключение. Клиент отключен");
                             setLogAndNick(null);
@@ -125,7 +137,7 @@ public class ClientEntry {
                     controller.removeClient(this);
                     closeConnection();
                 }
-            }).start();
+            });
 
         } catch (IOException e) {
             controller.putText("Ошибка подключения клиента " + e.toString());
@@ -140,7 +152,7 @@ public class ClientEntry {
         if (newData == null) {
             log = null;
             nick = null;
-            new Thread(()-> {
+            new Thread(() -> {
                 Thread currentThread = Thread.currentThread();
                 try {
                     currentThread.sleep(Const.TIMEOUT_NO_AUTH);
